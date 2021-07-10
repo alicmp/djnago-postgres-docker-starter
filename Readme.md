@@ -1,6 +1,6 @@
-# Django & Postgres With Docker Started Project
+# Django & Postgres With Docker Starter Project
 
-This project is created for a youtube video. If you are here because of that video, welcome! You can also use this project as starter for your own projects.
+This project is created for a youtube tutorial. If you are here because of that video, welcome! You can also use this project as starter for your own projects.
 
 ## Requirements
 - docker
