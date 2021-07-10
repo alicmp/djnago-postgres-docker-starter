@@ -6,6 +6,9 @@ This project is created for a youtube video. If you are here because of that vid
 - docker
 - docker-compose
 
+## Setup
+First you need to rename .env.sample file to .env.
+
 ## Setup on Development
 ```docker-compose up --build```
 
