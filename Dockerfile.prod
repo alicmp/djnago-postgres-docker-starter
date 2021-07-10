@@ -1,0 +1,53 @@
+# Builder Image
+
+FROM python:3.8-slim-buster as Builder
+
+
+WORKDIR /usr/src/app
+
+
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWEITEBYTECODE 1
+
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev
+  
+
+RUN pip install --upgrade pip pipenv
+COPY Pipfile* ./
+RUN pipenv lock --keep-outdated --requirements > requirements.txt \
+    && pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+
+
+# Final Image
+
+FROM python:3.8-slim-buster
+
+
+RUN mkdir -p /home/app
+
+
+RUN groupadd -r app && useradd --no-log-init -r -g app app
+
+
+ENV HOME=/home/app
+ENV APP_HOME=/home/app/web
+RUN mkdir $APP_HOME
+WORKDIR $APP_HOME
+
+
+RUN apt-get update && apt-get install -y libpq-dev
+COPY --from=builder /usr/src/app/wheels /wheels
+COPY --from=builder /usr/src/app/requirements.txt ./
+RUN pip install --no-cache /wheels/*
+
+
+COPY . $APP_HOME
+
+
+RUN chown -R app:app $APP_HOME
+
+
+USER app

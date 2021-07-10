@@ -1,0 +1,24 @@
+version: '3.7'
+
+
+services:
+  db:
+    image: postgres:13.3
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data/
+    env_file: .env
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on: 
+      - db
+
+volumes:
+  postgres_data:
