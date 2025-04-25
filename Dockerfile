@@ -28,3 +28,5 @@ COPY . .
 
 # lint
 RUN flake8 --ignore=E501,F401 .
+
+test
