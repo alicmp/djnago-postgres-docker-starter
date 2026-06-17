@@ -1,53 +1,36 @@
-# Builder Image
+FROM python:3.14-slim-trixie AS builder
 
-FROM python:3.8-slim-buster as Builder
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
+WORKDIR /build
 
-WORKDIR /usr/src/app
-
-
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWEITEBYTECODE 1
-
-
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev
-  
-
-RUN pip install --upgrade pip pipenv
-COPY Pipfile* ./
-RUN pipenv lock --keep-outdated --requirements > requirements.txt \
-    && pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+COPY requirements.txt .
+RUN pip wheel --wheel-dir /wheels -r requirements.txt
 
 
-# Final Image
+FROM python:3.14-slim-trixie
 
-FROM python:3.8-slim-buster
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
+WORKDIR /app
 
-RUN mkdir -p /home/app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && addgroup --system django \
+    && adduser --system --ingroup django django
 
+COPY --from=builder /wheels /wheels
+RUN pip install /wheels/* \
+    && rm -rf /wheels
 
-RUN groupadd -r app && useradd --no-log-init -r -g app app
+COPY . .
+RUN chown -R django:django /app
 
+USER django
 
-ENV HOME=/home/app
-ENV APP_HOME=/home/app/web
-RUN mkdir $APP_HOME
-WORKDIR $APP_HOME
-
-
-RUN apt-get update && apt-get install -y libpq-dev
-COPY --from=builder /usr/src/app/wheels /wheels
-COPY --from=builder /usr/src/app/requirements.txt ./
-RUN pip install --no-cache /wheels/*
-
-
-COPY . $APP_HOME
-
-
-RUN chown -R app:app $APP_HOME
-
-
-USER app
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
